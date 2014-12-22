@@ -1,0 +1,194 @@
+<!-- Modal: Download and Mark as Sent -->
+<div id="modalDownloadAndMarkSent">
+	<div class="modal-warning">
+		<h4>Would you like to mark this invoice as sent?</h4>
+	</div>
+</div>
+
+<h3>
+    Invoice: <?php echo $this->firmInvoice->getId();?>
+    <div class="btn-right-container">
+    	<a href="/firm-payments/create/<?php echo $this->firmInvoice->getId();?>" class="btn btn-green">Enter Payment</a>
+    	<a href="/firm-invoices/edit/<?php echo $this->firmInvoice->getId();?>" class="btn">Edit</a>
+    	<!-- Note: "Mark as sent" should only be available when the status is "Draft" -->
+    	<?php if($this->firmInvoice->getStatus() == \Eng\Entity\FirmInvoice::STATUS_DRAFT_VALUE):?>
+    	    <a href="#" id="markAsSent" class="btn">Mark as sent</a>
+    	<?php endif;?>
+    	<a href="#" id="open-DownloadAndMarkSent" class="btn">Download PDF</a>
+    </div>
+</h3>
+
+<!-- Invoice Container -->
+<div class="invoice-container full">
+
+	<!-- Invoice Status Banner -->
+	<div class="invoice-banner invoice-status-<?php echo $this->firmInvoice->getStatus();?>"></div>
+
+	<!-- Invoice Paper Content -->
+	<div class="invoice-content">
+
+		<!-- Watermark -->
+		<div class="invoice-watermark">Invoice</div>
+		<!-- /Watermark -->
+
+		<!-- Logo -->
+		<div class="invoice-logo"></div>
+		<!-- Logo -->
+
+		<!-- Invoice Top -->
+		<div class="colgroup leading full">
+			<div class="column width3 first">
+				<div class="invoice-address">
+					<div class="invoice-from">
+						<address></address>
+					</div>
+					<div class="invoice-to">
+						<!-- insert bill to address -->
+						<address>
+							<?php echo nl2br($this->firmInvoice->getClientAddress());?>
+						</address>
+					</div>
+				</div>
+			</div>
+			<div class="column">
+				<div class="invoice-from"></div>
+				<table class="invoice-box">
+					<tbody>
+						<tr>
+							<th>Invoice #:</th>
+							<td><?php echo $this->firmInvoice->getId();?></td>
+						</tr>
+							<tr>
+								<th>Invoice Date:</th>
+								<td><?php echo $this->dateFormatted($this->firmInvoice->getDateIssued());?></td>
+							</tr>						
+						<tr>
+							<th>Amount Due (USD):</th>
+							<td><?php echo $this->moneyFormatted($this->firmInvoice->getBalance(), false);?></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div> <!-- /Invoice Top -->
+
+		<!-- Invoice Items Container -->
+		<div class="invoice-items-container">
+			<table class="invoice-items full">
+				<colgroup>
+					<col>
+					<col>
+					<col>
+				</colgroup>
+				<thead>
+					<tr>
+						<th class="ta-left">Item Description</th>
+						<th>Duration (hr)</th>
+						<th class="end">Price ($)</th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach($this->firmInvoice->getRevenueItems() as $revenueItem):?>
+					<?php $event = $revenueItem->getEventFirmReference()->getEvent();?>
+					<tr>
+						<td>
+							<?php echo \Eng\Entity\Event::getEventTypeDisplay($event->getEventType());?> with <?php echo $this->emailExpertFullNames($event);?> (<?php echo $event->getSubject();?>) <?php if($revenueItem->getFirmRevenueStructure()->getIsPrepaid()):?><span class="msaItem">(Billed to: <?php echo $revenueItem->getFirmRevenueStructure()->getTitle();?>)</span><?php endif;?> <br> <span class="fadedText"><?php echo $this->dateTimeFormatted($event->getClientDate());?></span>
+						</td>
+						<td class="ta-center"><?php echo $event->getDurationDisplay();?></td>
+						<td class="ta-right"><?php echo $this->moneyFormatted($revenueItem->getAmount(), false);?></td>
+					</tr>
+				<?php endforeach;?>
+				</tbody>
+			</table>
+		</div> <!-- /Invoice Items Container -->
+
+		<!-- Invoice Notes -->
+		<?php if($notesToClient = $this->firmInvoice->getNotesToClient()):?>
+		<p class="invoice-notes-view">
+			<span>NOTE:</span>
+			<!-- Insert message -->
+			<?php echo $notesToClient;?>
+		</p>
+		<?php endif;?>
+		<!-- /Invoice Notes -->
+
+		<!-- Invoice Totals -->
+		<table class="invoice-totals-view full">
+			<tbody>
+				<tr>
+					<td class="ach-wire-instructions">
+					</td>
+					<td>
+						<table>
+							<tbody>
+								<tr>
+									<th>Subtotal:</th>
+									<td><?php echo $this->moneyFormatted($this->firmInvoice->getSubtotalAmount(), false);?></td>
+								</tr>
+								<?php if(($msaCredit = $this->firmInvoice->getPrepaidRevenueItemsTotalAmount()) != 0):?>
+								<tr>
+									<th class="msa-credit">MSA Credit:</th>
+									<td class="msa-credit">-<?php echo $this->moneyFormatted($msaCredit, false);?></td>
+								</tr>
+								<?php endif;?>
+								<?php if(($lateFee = $this->firmInvoice->getLateFee()):?>
+								<tr>
+									<th class="late-payment-fee">Late Payment Fee:</th>
+									<td class="late-payment-fee"><?php echo $this->moneyFormatted($lateFee, false);?></td>
+								</tr>
+								<?php endif;?>
+								<tr>
+									<th class="total">Total:</th>
+									<td class="total"><?php echo $this->moneyFormatted($this->firmInvoice->getTotalAmount(), false);?></td>
+								</tr>
+								<tr>
+									<th>Amount Paid:</th>
+									<td><?php echo $this->moneyFormatted($this->firmInvoice->getFirmPaymentsTotalAmount(), false);?></td>
+								</tr>
+								<tr>
+									<th class="balance">Balance Due (USD):</th>
+									<td class="balance">$ <?php echo $this->moneyFormatted($this->firmInvoice->getBalance(), false);?></td>
+								</tr>
+							</tbody>
+						</table>
+					</td>
+				</tr>
+			</tbody>
+		</table> <!-- /Invoice Totals -->
+
+		<!-- Invoice Terms -->
+		<div class="invoice-terms-view">
+			<?php echo $this->firmInvoice->getTerms();?>
+		</div> <!-- /Invoice Terms -->
+
+	</div> <!-- /Invoice Paper Content -->
+
+</div> <!-- /Invoice Container -->
+
+<!-- Payment Activity -->
+<div class="colgroup full leading">
+    <ul class="blockList">
+        <li class="block">
+            <div class="inner">
+                <div class="blockHeader">
+                    <h3>Payments History</h3>
+                </div>
+                <table class="no-style full activityLog">
+                   <colgroup>
+                       <col>
+                       <col>
+                       <col>
+                   </colgroup>
+                    <tbody>
+                    <?php foreach($this->firmInvoice->getFirmPayments() as $firmPayment):?>
+                        <tr>
+                            <td><div class="activityLog_label statusLabel-fullPayment">Payment</div></td>
+                            <td><?php echo $firmPayment->getMethodDisplay();?> Payment of <?php echo $this->moneyFormatted($firmPayment->getAmount(), false);?> USD. <a href="/firm-payments/view/<?php echo $firmPayment->getId();?>">View payment</a>.</td>
+                            <td class="activityLog_date"><?php echo $this->dateTimeFormatted($firmPayment->getDateCreated());?></td>
+                        </tr>
+                    <?php endforeach;?>
+                    </tbody>
+                </table>
+            </div>
+        </li>
+    </ul>
+</div> <!-- /Payment Activity -->
